@@ -10,3 +10,7 @@ As I eagerly await my [Tidbyt](https://tidbyt.com/), I thought I'd play around w
 
 ### hob_byt.star
 This will call [the-one-api](https://the-one-api.dev/documentation) to list random quotes from random LOTR movies and display them. You will need to create your own API key and replace `{add token here}` with it.
+
+![image](https://user-images.githubusercontent.com/7552226/133950521-97414b05-6dcc-4b97-ae64-c2c962aa99f1.png)
+
+![animated](https://user-images.githubusercontent.com/7552226/133950591-fb118f9b-bd8d-4854-a604-5d4553a8245a.gif)
