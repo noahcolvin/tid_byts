@@ -34,7 +34,9 @@ ifzdPGJu5WRV+oRvSnFI93OqcKd8EcjuSMqxB7Zq/cIWzB74Cw/B1Fwem2sficXdwViL4B9lr4D1
 NqhzUAAAAASUVORK5CYII=
 """)
 
-def main():
+def main(config):
+  metric = config.bool("metric") or False
+
   closest = get_soonest_neo()
 
   if closest == None:
@@ -90,7 +92,7 @@ def main():
             expanded = False,
             children = [
               render.Text(
-                content = neo_distance(closest),
+                content = neo_distance(closest, metric),
                 font = "tb-8"
               ),
               render.Text(
@@ -98,7 +100,7 @@ def main():
                 font = "tb-8"
               ),
               render.Text(
-                content = neo_speed(closest),
+                content = neo_speed(closest, metric),
                 font = "tb-8"
               )
             ]
@@ -173,11 +175,11 @@ def find_next_from_now(neos):
 
   return soonest_neo
 
-def neo_speed(neo):
-  return "{} mph".format(int(float(neo["close_approach_data"][0]["relative_velocity"]["miles_per_hour"])))
+def neo_speed(neo, metric):
+  return "{} {}".format(int(float(neo["close_approach_data"][0]["relative_velocity"]["kilometers_per_hour" if metric else "miles_per_hour"])), "km/h" if metric else "mph")
 
-def neo_distance(neo):
-  return "{} miles".format(int(float(neo["close_approach_data"][0]["miss_distance"]["miles"])))
+def neo_distance(neo, metric):
+  return "{} {}".format(int(float(neo["close_approach_data"][0]["miss_distance"]["kilometers" if metric else "miles"])), "km" if metric else "miles")
 
 def neo_relative_time(neo):
   now = time.from_timestamp(time.now().unix) # kills fractions of a second
