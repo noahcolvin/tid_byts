@@ -5,7 +5,7 @@ load("cache.star", "cache")
 load("time.star", "time")
 load("encoding/json.star", "json")
 
-URL = "https://www.neowsapp.com/rest/v1/feed?detailed=false&start_date={}&end_date={}"
+URL = "https://www.neowsapp.com/rest/v1/feed?detailed=false&start_date={}"
 CACHE_KEY = "neos"
 
 # taken from https://pixabay.com/illustrations/planetarium-comet-falling-star-5636947/
@@ -35,7 +35,7 @@ NqhzUAAAAASUVORK5CYII=
 """)
 
 def main():
-  closest = get_closest_neo()
+  closest = get_soonest_neo()
 
   if closest == None:
     return render.Root(
@@ -110,27 +110,27 @@ def main():
     )
   )
 
-def get_closest_neo():
+def get_soonest_neo():
   data = get_data()
-
-  print("elements %s" % data["element_count"])
 
   if data["element_count"] < 1:
     print("No near earth objects")
     return None
 
   dates = data["near_earth_objects"]
-  today_objs = dates[today()]
-  next = find_next(today_objs)
+  next = find_soonest_starting(dates, time.now())
 
   return next
 
 def get_data():
   neos_cached = cache.get(CACHE_KEY)
+  print("neos_cached {}".format(neos_cached))
   if neos_cached != None:
+    print("using cache")
     return json.decode(neos_cached)
 
-  url = URL.format(today(), tomorrow())
+  url = URL.format(format_date_padded(time.now()))
+  print("fetching {}".format(url))
   resp = http.get(url)
 
   if resp.status_code != 200:
@@ -138,18 +138,28 @@ def get_data():
     return None
   data = resp.json()
 
-  cache.set(CACHE_KEY, json.encode(data), ttl_seconds=43200)
+  cache.set(CACHE_KEY, json.encode(data), ttl_seconds=432)
 
   return data
 
-def find_next(neos):
+def find_soonest_starting(neos, date):
+  soonest = None
+  one_week = date + time.parse_duration("168h")
+
+  while soonest == None and date < one_week:
+    formatted_date = format_date_padded(date)
+    if formatted_date in neos:
+      soonest = find_next_from_now(neos[formatted_date])
+    if soonest == None:
+      date = add_day(date)
+
+  return soonest
+
+def find_next_from_now(neos):
   now = time.now().unix
-  print(now)
 
   soonest_neo = None
   for neo in neos:
-    print(neo)
-    print(neo_unix_date(neo))
     if neo_unix_date(neo) < now:
       continue #skip passed times
 
@@ -161,7 +171,6 @@ def find_next(neos):
       soonest_neo = neo
     break
 
-  print(soonest_neo)
   return soonest_neo
 
 def neo_speed(neo):
@@ -172,14 +181,11 @@ def neo_distance(neo):
 
 def neo_relative_time(neo):
   now = time.from_timestamp(time.now().unix) # kills fractions of a second
-  print(now.unix)
   neo_time = time.from_timestamp(neo_unix_date(neo))
 
   diff = neo_time - now
-  print(diff)
 
   int_seconds = int(diff.seconds)
-  print(int_seconds)
   return diff
 
 def neo_unix_date(neo):
@@ -188,17 +194,13 @@ def neo_unix_date(neo):
 def convert_unix_to_seconds(time):
   return int(time / 1000)
 
-def today():
-  now = time.now().in_location("UTC")
-  print(now)
-  return "{}-{}-{}".format(now.year, pad_if_needed(now.month), pad_if_needed(now.day))
+def format_date_padded(date):
+  return "{}-{}-{}".format(date.year, pad_if_needed(date.month), pad_if_needed(date.day))
 
-def tomorrow():
-  now = time.now().in_location("UTC")
+def add_day(date):
   one_day = time.parse_duration("24h")
-  tomorrow = now + one_day
-  print(tomorrow)
-  return "{}-{}-{}".format(tomorrow.year, pad_if_needed(tomorrow.month), pad_if_needed(tomorrow.day))
+  next_day = date + one_day
+  return next_day
 
 def pad_if_needed(number):
   if len(str(number)) == 1:
