@@ -1,4 +1,5 @@
 load("render.star", "render")
+load("schema.star", "schema")
 load("http.star", "http")
 load("encoding/base64.star", "base64")
 load("cache.star", "cache")
@@ -112,6 +113,20 @@ def main(config):
     )
   )
 
+def get_schema():
+  return schema.Schema(
+    version = "1",
+    fields = [
+      schema.Toggle(
+        id = "metric",
+        name = "Use Kilometers",
+        desc = "Whether to display distance and speed in kilometers.",
+        icon = "meteor",
+        default = False,
+      ),
+    ],
+  )
+
 def get_soonest_neo():
   data = get_data()
 
@@ -176,10 +191,12 @@ def find_next_from_now(neos):
   return soonest_neo
 
 def neo_speed(neo, metric):
-  return "{} {}".format(int(float(neo["close_approach_data"][0]["relative_velocity"]["kilometers_per_hour" if metric else "miles_per_hour"])), "km/h" if metric else "mph")
+  speed = format_number(int(float(neo["close_approach_data"][0]["relative_velocity"]["kilometers_per_hour" if metric else "miles_per_hour"])))
+  return "{} {}".format(speed, "km/h" if metric else "mph")
 
 def neo_distance(neo, metric):
-  return "{} {}".format(int(float(neo["close_approach_data"][0]["miss_distance"]["kilometers" if metric else "miles"])), "km" if metric else "miles")
+  distance = format_number(int(float(neo["close_approach_data"][0]["miss_distance"]["kilometers" if metric else "miles"])))
+  return "{} {}".format(distance, "km" if metric else "miles")
 
 def neo_relative_time(neo):
   now = time.from_timestamp(time.now().unix) # kills fractions of a second
@@ -208,3 +225,20 @@ def pad_if_needed(number):
   if len(str(number)) == 1:
     return "0{}".format(number)
   return number
+
+def format_number(number):
+  num = str(number)
+  if len(num) < 4:
+    return num
+
+  count = 0
+  result = ""
+  for n in reversed(num.elems()):
+    result = n + result
+    count = count + 1
+
+    if count == 3:
+      result = ',' + result
+      count = 0
+
+  return result.strip(',')
